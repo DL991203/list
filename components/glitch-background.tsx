@@ -62,13 +62,50 @@ function GlitchScene({ isHovered }: GlitchSceneProps) {
     const renderPass = new RenderPass(scene, camera)
     composer.addPass(renderPass)
 
-    // Add glitch pass (slower trigger: default randX is 120–240 frames)
+    // Decouple trigger interval from burst length (default ties both to randX)
+    const BURST_FRAMES = 32
+    const MIN_INTERVAL = 800
+    const MAX_INTERVAL = 1200
+
     const glitchPass = new GlitchPass()
     glitchPass.goWild = false
-    glitchPass.generateTrigger = function () {
-      this.randX = THREE.MathUtils.randInt(320, 560)
+
+    let burstCounter = 0
+    let framesUntilNext = THREE.MathUtils.randInt(MIN_INTERVAL, MAX_INTERVAL)
+
+    glitchPass.render = function (renderer, writeBuffer, readBuffer) {
+      this.uniforms.tDiffuse.value = readBuffer.texture
+      this.uniforms.seed.value = Math.random()
+      this.uniforms.byp.value = 1
+
+      if (burstCounter > 0) {
+        const isPeak = burstCounter === BURST_FRAMES
+        this.uniforms.byp.value = 0
+        this.uniforms.amount.value = Math.random() / (isPeak ? 30 : 90)
+        this.uniforms.angle.value = THREE.MathUtils.randFloat(-Math.PI, Math.PI)
+        this.uniforms.distortion_x.value = THREE.MathUtils.randFloat(0, 1)
+        this.uniforms.distortion_y.value = THREE.MathUtils.randFloat(0, 1)
+        this.uniforms.seed_x.value = THREE.MathUtils.randFloat(isPeak ? -1 : -0.3, isPeak ? 1 : 0.3)
+        this.uniforms.seed_y.value = THREE.MathUtils.randFloat(isPeak ? -1 : -0.3, isPeak ? 1 : 0.3)
+        burstCounter--
+      } else {
+        framesUntilNext--
+        if (framesUntilNext <= 0) {
+          burstCounter = BURST_FRAMES
+          framesUntilNext = THREE.MathUtils.randInt(MIN_INTERVAL, MAX_INTERVAL)
+        }
+      }
+
+      if (this.renderToScreen) {
+        renderer.setRenderTarget(null)
+        this.fsQuad.render(renderer)
+      } else {
+        renderer.setRenderTarget(writeBuffer)
+        if (this.clear) renderer.clear()
+        this.fsQuad.render(renderer)
+      }
     }
-    glitchPass.generateTrigger()
+
     composer.addPass(glitchPass)
     glitchPassRef.current = glitchPass
 
