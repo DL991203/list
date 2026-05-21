@@ -15,12 +15,7 @@ function GlitchScene({ isHovered }: GlitchSceneProps) {
   const meshRef = useRef<THREE.Mesh | null>(null)
   const glitchPassRef = useRef<GlitchPass | null>(null)
   
-  // Load both textures
-  const defaultTexture = useLoader(THREE.TextureLoader, "/images/f10faf42-10ba-410b-895c-809514e88228.png")
-  const hoverTexture = useLoader(THREE.TextureLoader, "/images/5997ed75-df3f-4df3-8f4b-e4f4ae9d1c9e.png")
-  
-  // Select texture based on hover state
-  const texture = isHovered ? hoverTexture : defaultTexture
+  const texture = useLoader(THREE.TextureLoader, "/images/waitlistfalcario.png")
 
   useEffect(() => {
     // Calculate aspect ratios
@@ -67,9 +62,13 @@ function GlitchScene({ isHovered }: GlitchSceneProps) {
     const renderPass = new RenderPass(scene, camera)
     composer.addPass(renderPass)
 
-    // Add glitch pass
+    // Add glitch pass (slower trigger: default randX is 120–240 frames)
     const glitchPass = new GlitchPass()
-    glitchPass.goWild = false // Set to true for more intense glitch
+    glitchPass.goWild = false
+    glitchPass.generateTrigger = function () {
+      this.randX = THREE.MathUtils.randInt(320, 560)
+    }
+    glitchPass.generateTrigger()
     composer.addPass(glitchPass)
     glitchPassRef.current = glitchPass
 
